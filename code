@@ -1,0 +1,901 @@
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Observable, of, forkJoin } from 'rxjs';
+import { AppConstants } from 'src/app/app.constants';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class ExaminationService {
+  constructor(private http: HttpClient) { }
+
+  getSessionsBoardsTerms(instituteId: string): Observable<any[]> {
+    const response1 = this.http.get<any>(
+      `${AppConstants.API_URL}AcademicSessions/institute/${instituteId}`
+    );
+    const response2 = this.http.get<any>(
+      `${AppConstants.API_URL}Curriculums/instituteBoardList`
+    );
+    const response3 = this.http.get<any>(
+      `${AppConstants.API_URL}examTermMasters/institute/${instituteId}`
+    );
+    return forkJoin([response1, response2, response3]);
+  }
+
+  getLearningLevels(
+    instituteId: string,
+    academicSessionId: string,
+    boardId: string
+  ) {
+    return this.http.post<any>(
+      `${AppConstants.API_URL}LearningLevels/mappedList`,
+      { instituteId, academicSessionId, boardId }
+    );
+  }
+
+  getGrades(
+    instituteId: string,
+    boardId: string,
+    learningLevelId: string,
+    subjectGroupId: string,
+    subjectId: string
+  ) {
+    return this.http.post<any>(`${AppConstants.API_URL}Grades/mappedList`, {
+      instituteId,
+      boardId,
+      learningLevelId,
+      subjectGroupId,
+      subjectId,
+    });
+  }
+
+  getTerms(instituteId: string): Observable<any[]> {
+    return this.http.get<any>(
+      `${AppConstants.API_URL}examTermMasters/institute/${instituteId}`
+    );
+  }
+
+  getLearningLevelAndGrades(instituteId, academicSessionId, boardId) {
+    const response1 = this.http.post<any>(
+      `${AppConstants.API_URL}LearningLevels/mappedList`,
+      { instituteId, academicSessionId, boardId }
+    );
+    const response2 = this.http.post<any>(
+      `${AppConstants.API_URL}Grades/mappedList`,
+      {
+        instituteId,
+        boardId,
+      }
+    );
+    return forkJoin([response1, response2]);
+  }
+
+  save(examTypeMaster) {
+    if (examTypeMaster.id) {
+      return this.http.put<any>(
+        `${AppConstants.API_URL}examTypeMasters`,
+        examTypeMaster
+      );
+    } else {
+      return this.http.post<any>(
+        `${AppConstants.API_URL}examTypeMasters`,
+        examTypeMaster
+      );
+    }
+  }
+
+  saveCategory(ExamCategoryMaster) {
+    if (ExamCategoryMaster.id) {
+      return this.http.put<any>(
+        `${AppConstants.API_URL}ExamCategoryMasters`,
+        ExamCategoryMaster
+      );
+    } else {
+      return this.http.post<any>(
+        `${AppConstants.API_URL}ExamCategoryMasters`,
+        ExamCategoryMaster
+      );
+    }
+  }
+
+  getExamTypeMasterList(
+    instituteId: string,
+    academicSessionId: string,
+    boardId: string,
+    termId: string,
+    examCategoryMasterId: string
+  ) {
+    return this.http.post<any>(`${AppConstants.API_URL}ExamTypeMasters/list`, {
+      instituteId,
+      academicSessionId,
+      boardId,
+      termId,
+      examCategoryMasterId,
+    });
+  }
+
+  getExamCategoryMasterList(
+    instituteId: string,
+    academicSessionId: string,
+    boardId: string,
+    termId: string,
+    gradeId?: string
+  ) {
+    return this.http.post<any>(
+      `${AppConstants.API_URL}ExamCategoryMasters/list`,
+      {
+        instituteId,
+        academicSessionId,
+        boardId,
+        termId,
+        gradeId,
+      }
+    );
+  }
+
+  getExamCategoryMasterListForAllTerms(
+    instituteId: string,
+    academicSessionId: string,
+    boardId: string,
+    gradeId?: string
+  ) {
+    return this.http.post<any>(
+      `${AppConstants.API_URL}ExamCategoryMasters/categoryList`,
+      {
+        instituteId,
+        academicSessionId,
+        boardId,
+        gradeId,
+      }
+    );
+  }
+
+  getExamTypeMaterMapping(
+    instituteId: string,
+    academicSessionId?: string,
+    boardId?: string,
+    gradeId?: string,
+    termId?: string,
+    subjectType?: number
+  ) {
+    return this.http.post<any>(
+      `${AppConstants.API_URL}ExamTypeMasters/mapping`,
+      {
+        instituteId,
+        academicSessionId,
+        boardId,
+        gradeId,
+        termId,
+        subjectType,
+      }
+    );
+  }
+
+  getCuratorMappingSubjects(
+    academicSessionId: string,
+    boardId: string,
+    gradeId: string,
+    subjectType: any
+  ) {
+    return this.http.post<any>(
+      `${AppConstants.API_URL}CuratorMappings/Subjects`,
+      {
+        academicSessionId,
+        boardId,
+        gradeId,
+        subjectType,
+      }
+    );
+  }
+
+  getGroupMappingSubjects(
+    instituteId: string,
+    boardId: string,
+    gradeId: string
+  ) {
+    return this.http.get<any>(
+      `${AppConstants.API_URL}PeriodicAssessmentQuizzes/institute/${instituteId}/board/${boardId}/grade/${gradeId}/subjectGroup`
+    );
+  }
+
+  getExamPatternMapping(examMasterId, examCompetencyId?) {
+    return this.http.post<any>(`${AppConstants.API_URL}ExamPatterns/Mapping`, {
+      examMasterId,
+      examCompetencyId,
+    });
+  }
+
+  saveSubjectCompetence(data) {
+    if (data.id) {
+      return this.http.put<any>(
+        `${AppConstants.API_URL}ExamCompetencies`,
+        data
+      );
+    } else {
+      return this.http.post<any>(
+        `${AppConstants.API_URL}ExamCompetencies`,
+        data
+      );
+    }
+  }
+
+  saveTemplate(data) {
+    return this.http.post<any>(`${AppConstants.API_URL}ExamPatterns`, data);
+  }
+
+  updateExamMaster(data) {
+    return this.http.post<any>(
+      `${AppConstants.API_URL}ExamMasters/configuration`,
+      {
+        examMasterId: data.id,
+        configuration: data.configuration,
+      }
+    );
+  }
+
+  isExamMarksEntryExists(data) {
+    return this.http.post<any>(
+      `${AppConstants.API_URL}ExamMarksEntries/check`,
+      data
+    );
+  }
+
+  getCompetency() {
+    return this.http.get<any>(`${AppConstants.API_URL}ExamCompetencyMasters`);
+  }
+
+  getMasterCompetencyAndSubjectCompetency(examMasterId) {
+    const response1 = this.http.get<any>(
+      `${AppConstants.API_URL}ExamCompetencyMasters`
+    );
+    const response2 = this.http.post<any>(
+      `${AppConstants.API_URL}ExamCompetencies/Mapping`,
+      { examMasterId }
+    );
+    return forkJoin([response1, response2]);
+  }
+
+  getExamPatternDetailsWithSections(examPatternId) {
+    const response1 = this.http.get<any>(
+      `${AppConstants.API_URL}ExamPatterns/detail/${examPatternId}`
+    );
+    const response2 = this.http.post<any>(
+      `${AppConstants.API_URL}ExamPatternSectionQuestions/mapping`,
+      { examPatternId }
+    );
+    return forkJoin([response1, response2]);
+  }
+
+  getTopics(
+    academicSessionId: string,
+    boardId: string,
+    gradeId: string,
+    subjectGroupId: string,
+    subjectId: string
+  ) {
+    return this.http.post<any>(`${AppConstants.API_URL}ExamPatterns/Topics`, {
+      academicSessionId,
+      boardId,
+      gradeId,
+      subjectGroupId,
+      subjectId,
+    });
+  }
+
+  getExamPatternSections(examPatternId) {
+    return this.http.post<any>(
+      `${AppConstants.API_URL}ExamPatternSectionQuestions/mapping`,
+      { examPatternId }
+    );
+  }
+
+  createExamPatternSection(data) {
+    return this.http.post<any>(
+      `${AppConstants.API_URL}ExamPatternSections`,
+      data
+    );
+  }
+
+  archiveExamPatternSection(examPatternId, examPatternSectionId) {
+    return this.http.post<any>(
+      `${AppConstants.API_URL}ExamPatternSections/archive`,
+      { examPatternId, examPatternSectionId }
+    );
+  }
+
+  archiveExamPatternSectionQuestion(
+    examPatternId,
+    examPatternSectionQuestionId
+  ) {
+    return this.http.post<any>(
+      `${AppConstants.API_URL}ExamPatternSectionQuestions/archive`,
+      {
+        examPatternId,
+        examPatternSectionQuestionId,
+      }
+    );
+  }
+
+  updateTemplateSections(copiedExamPatternSections) {
+    const sections = [];
+    copiedExamPatternSections.forEach((section) => {
+      sections.push(
+        this.http.put<any>(
+          `${AppConstants.API_URL}ExamPatternSections`,
+          section
+        )
+      );
+    });
+    return forkJoin(sections);
+  }
+
+  updatePatternTemplate(examPatternDetails) {
+    return this.http.put<any>(
+      `${AppConstants.API_URL}ExamPatterns`,
+      examPatternDetails
+    );
+  }
+
+  saveUpdateSectionQuestion(questionSets) {
+    const sections = [];
+    questionSets.forEach((question) => {
+      if (question.id || question._id) {
+        sections.push(
+          this.http.post<any>(
+            `${AppConstants.API_URL}ExamPatternSectionQuestions/save`,
+            question
+          )
+        );
+      } else {
+        sections.push(
+          this.http.post<any>(
+            `${AppConstants.API_URL}ExamPatternSectionQuestions`,
+            question
+          )
+        );
+      }
+    });
+    return forkJoin(sections);
+  }
+
+  createExamPatternSectionQuestion(question) {
+    return this.http.post<any>(
+      `${AppConstants.API_URL}ExamPatternSectionQuestions`,
+      question
+    );
+  }
+
+  updateExamPatternSectionQuestion(questions) {
+    const questionsToSave = [];
+    questions.forEach((q) => {
+      questionsToSave.push(
+        this.http.post<any>(
+          `${AppConstants.API_URL}ExamPatternSectionQuestions/save`,
+          q
+        )
+      );
+    });
+    return forkJoin(questionsToSave);
+  }
+
+  saveExamPaper(data) {
+    return this.http.post<any>(`${AppConstants.API_URL}ExamPapers`, data);
+  }
+
+  updateExamPaper(data) {
+    return this.http.put<any>(`${AppConstants.API_URL}ExamPapers`, data);
+  }
+
+  getExamPapersByPatternId(examPatternId, instituteId = null) {
+    return this.http.post<any>(`${AppConstants.API_URL}ExamPapers/list`, {
+      examPatternId,
+      instituteId,
+    });
+  }
+
+  getExamPaperDetail(examPaperId) {
+    return this.http.get<any>(
+      `${AppConstants.API_URL}ExamPapers/detail/${examPaperId}`
+    );
+  }
+
+  getQuestions(data) {
+    return this.http.post<any>(
+      `${AppConstants.API_URL}ExamPapers/questions`,
+      data
+    );
+  }
+
+  examPatternSendForReview(examPatternId) {
+    return this.http.get<any>(
+      `${AppConstants.API_URL}ExamPatterns/review/${examPatternId}`
+    );
+  }
+
+  examPatternApproveReject(examPatternId, comment, status) {
+    return this.http.post<any>(`${AppConstants.API_URL}ExamPatterns/review/`, {
+      examPatternId,
+      comment,
+      status,
+    });
+  }
+
+  examPaperSendForReview(examPaperId) {
+    return this.http.get<any>(
+      `${AppConstants.API_URL}ExamPapers/review/${examPaperId}`
+    );
+  }
+
+  examPaperApproveReject(examPaperId, comment, status) {
+    return this.http.post<any>(`${AppConstants.API_URL}ExamPapers/review/`, {
+      examPaperId,
+      comment,
+      status,
+    });
+  }
+
+  getMappedCompetenciesAndGrade(
+    instituteId: string,
+    learningLevelId: string,
+    academicSessionId: string,
+    subjectGroupId: string,
+    boardId: string,
+    subjectId: string
+  ) {
+    const response1 = this.http.post<any>(
+      `${AppConstants.API_URL}ExamCompetencyMasters/mapping`,
+      {
+        academicSessionId,
+        boardId,
+        subjectId,
+      }
+    );
+    const response2 = this.http.post<any>(
+      `${AppConstants.API_URL}Grades/mappedList`,
+      {
+        instituteId,
+        boardId,
+        learningLevelId,
+        subjectGroupId,
+        subjectId,
+      }
+    );
+    return forkJoin([response1, response2]);
+  }
+
+  getAcademicSessions(instituteId: string): Observable<any[]> {
+    return this.http.get<any>(
+      `${AppConstants.API_URL}AcademicSessions/institute/${instituteId}`
+    );
+  }
+
+  getInsitiuteBoards(instituteId = null): Observable<any[]> {
+    return this.http.get<any>(
+      `${AppConstants.API_URL}Curriculums/instituteBoardList`,
+      {
+        params: {
+          instituteId,
+        },
+      }
+    );
+  }
+
+  getGroupMappedCompetencies(
+    instituteId: string,
+    boardId: string,
+    gradeId: string,
+    subjectType: any,
+    subjectGroupId: string
+  ) {
+    return this.http.get<any>(
+      `${AppConstants.API_URL}PeriodicAssessmentQuizzes/institute/${instituteId}/board/${boardId}/
+grade/${gradeId}/subjects?subjectGroupId=${subjectGroupId}`
+    );
+  }
+
+  saveSubjectCompetenceMaster(competency: any) {
+    return this.http.post<any>(
+      `${AppConstants.API_URL}ExamCompetencyMasters/save`,
+      competency
+    );
+  }
+
+  deleteCompetency(id) {
+    return this.http.get(
+      `${AppConstants.API_URL}ExamCompetencyMasters/archive/${id}`
+    );
+  }
+
+  getExamTypeMapping(
+    instituteId: string,
+    academicSessionId?: string,
+    boardId?: string,
+    gradeId?: string,
+    termId?: string
+  ) {
+    return this.http.post<any>(
+      `${AppConstants.API_URL}ExamTypeMasters/mapping`,
+      {
+        instituteId,
+        academicSessionId,
+        boardId,
+        gradeId,
+        termId,
+      }
+    );
+  }
+
+  getbranches(instituteId) {
+    return this.http.get<any>(
+      `${AppConstants.API_URL}branches/institute/${instituteId}`
+    );
+  }
+
+  getNonCorporateBranches(instituteId) {
+    return this.http.get<any>(
+      `${AppConstants.API_URL}branches/institute/${instituteId}/noncorporate`
+    );
+  }
+
+  getExamPattern(
+    boardId,
+    gradeId,
+    examTypeMasterId,
+    subjectId,
+    subjectGroupId,
+    examCompetencyMasterId
+  ) {
+    return this.http.post<any>(
+      `${AppConstants.API_URL}ExamPatterns/reviewList`,
+      {
+        boardId,
+        gradeId,
+        examTypeMasterId,
+        subjectId,
+        subjectGroupId,
+        examCompetencyMasterId,
+      }
+    );
+  }
+
+  getSubjectGroups(
+    institueId,
+    boardId,
+    learningLevelId,
+    subjectType,
+    gradeId?: string
+  ) {
+    return this.http.post(`${AppConstants.API_URL}SubjectGroups/mappedList`, {
+      institueId,
+      boardId,
+      learningLevelId,
+      subjectType,
+      gradeId,
+    });
+  }
+
+  getSubjectBySubjectGroupId(
+    institueId,
+    boardId,
+    learningLevelId,
+    subjectGroupId,
+    subjectType,
+    gradeId?: string
+  ) {
+    return this.http.post(`${AppConstants.API_URL}Subjects/mappedList`, {
+      institueId,
+      boardId,
+      learningLevelId,
+      subjectGroupId,
+      subjectType,
+      gradeId,
+    });
+  }
+
+  getExamPapers(
+    boardId,
+    gradeId,
+    examTypeMasterId,
+    subjectId,
+    subjectGroupId,
+    examCompetencyMasterId
+  ) {
+    return this.http.post<any>(`${AppConstants.API_URL}ExamPapers/reviewList`, {
+      boardId,
+      gradeId,
+      examTypeMasterId,
+      subjectId,
+      subjectGroupId,
+      examCompetencyMasterId,
+    });
+  }
+
+  getreviewexampatterns(examPatternId, status, comment) {
+    return this.http.post<any>(`${AppConstants.API_URL}ExamPatterns/review`, {
+      examPatternId,
+      status,
+      comment,
+    });
+  }
+
+  handlePaperStatus(examPaperId, status, comment) {
+    return this.http.post<any>(`${AppConstants.API_URL}ExamPapers/review`, {
+      examPaperId,
+      status,
+      comment,
+    });
+  }
+
+  removeExamCategory(id) {
+    return this.http.post<any>(
+      `${AppConstants.API_URL}ExamCategoryMasters/archive`,
+      {
+        examCategoryMasterId: id,
+      }
+    );
+  }
+
+  removeExamType(id) {
+    return this.http.post<any>(
+      `${AppConstants.API_URL}ExamTypeMasters/archive`,
+      {
+        examTypeMasterId: id,
+      }
+    );
+  }
+
+  fetchSubjectGroupDetails(
+    academicSessionId,
+    examTypeMasterId,
+    examTypeMasterName,
+    gradeId,
+    boardId,
+    termId,
+    termName,
+    subjectGroupId,
+    subjectGroupName,
+    subjectType = 0,
+    instituteId = null
+  ) {
+    const data = {
+      academicSessionId,
+      examTypeMasterId,
+      gradeId,
+      boardId,
+      termId,
+      examTypeMasterName,
+      termName,
+      subjectGroupId,
+      subjectGroupName,
+      subjectType,
+      instituteId,
+    };
+    return this.http.post(
+      `${AppConstants.API_URL}ExamSubjectGroupConfigurations/fetch`,
+      data
+    );
+  }
+
+  updateSubjectGroupMaster(id, configuration) {
+    return this.http.post(
+      `${AppConstants.API_URL}ExamSubjectGroupConfigurations/save`,
+      { id, configuration }
+    );
+  }
+
+  fetchSubjectDetails(
+    academicSessionId,
+    examTypeMasterId,
+    examTypeMasterName,
+    gradeId,
+    boardId,
+    termId,
+    termName,
+    subjectGroupId,
+    subjectGroupName,
+    subjectId,
+    subjectName,
+    instituteId
+  ) {
+    const data = {
+      academicSessionId,
+      examTypeMasterId,
+      gradeId,
+      boardId,
+      termId,
+      examTypeMasterName,
+      termName,
+      subjectGroupId,
+      subjectGroupName,
+      subjectId,
+      subjectName,
+      instituteId,
+    };
+    return this.http.post(
+      `${AppConstants.API_URL}ExamSubjectConfigurations/fetch`,
+      data
+    );
+  }
+
+  updateSubjectMaster(id, configuration) {
+    return this.http.post(
+      `${AppConstants.API_URL}ExamSubjectConfigurations/save`,
+      { id, configuration }
+    );
+  }
+
+  fetchCompetencyDetails(
+    academicSessionId,
+    examTypeMasterId,
+    examTypeMasterName,
+    gradeId,
+    boardId,
+    termId,
+    termName,
+    subjectGroupId,
+    subjectGroupName,
+    subjectId,
+    subjectName,
+    examSubjectGroupConfigurationId,
+    examSubjectConfigurationId,
+    examCompetencyMasterId,
+    examCompetencyMasterName
+  ) {
+    const data = {
+      academicSessionId,
+      examTypeMasterId,
+      gradeId,
+      boardId,
+      termId,
+      examTypeMasterName,
+      termName,
+      subjectGroupId,
+      subjectGroupName,
+      subjectId,
+      subjectName,
+      examSubjectGroupConfigurationId,
+      examSubjectConfigurationId,
+      examCompetencyMasterId,
+      examCompetencyMasterName,
+    };
+    return this.http.post(
+      `${AppConstants.API_URL}ExamCompetencyConfigurations/fetch`,
+      data
+    );
+  }
+
+  updateCompetencyMaster(id, configuration) {
+    return this.http.post(
+      `${AppConstants.API_URL}ExamCompetencyConfigurations/save`,
+      { id, configuration }
+    );
+  }
+
+  archivePattern(id) {
+    return this.http.post(`${AppConstants.API_URL}ExamPatterns/archive`, {
+      id,
+    });
+  }
+
+  archivePaper(id) {
+    return this.http.post(`${AppConstants.API_URL}ExamPapers/archive`, { id });
+  }
+
+  assessmentReviewFilters(data = {}) {
+    return this.http.post(`${AppConstants.API_URL}ExamPatterns/filters`, data);
+  }
+
+  getExamConfigurations(data) {
+    return this.http.post(
+      `${AppConstants.API_URL}ExamTypeMasters/getExamTypes`,
+      data
+    );
+  }
+
+  generatePDF(data) {
+    return this.http.post(`${AppConstants.API_URL}generatePaperPdf`, data);
+  }
+
+  uploadResource(data) {
+    const fd = new FormData();
+    fd.append('file', data);
+    fd.append('save', 'true');
+    fd.append('isPrivate', 'true');
+    fd.append('type', 'image');
+    return this.http.post<any>(
+      `${AppConstants.AUTH_URL}resources/uploadResource`,
+      fd
+    );
+  }
+
+  loadStudentMarks(termId, studentId, academicSessionId) {
+    if (academicSessionId === 'null') {
+      academicSessionId = null;
+    }
+    const response1 = this.http.post<any>(
+      `${AppConstants.API_URL}ExamMarksEntries/getStudentMarksDetails`,
+      { studentId, termId, academicSessionId }
+    );
+    const response2 = this.http.post<any>(
+      `${AppConstants.API_URL}ExamMarksEntries/getCoScholasticRemarks`,
+      { userId: studentId, termId, academicSessionId }
+    );
+    const response3 = this.http.post<any>(
+      `${AppConstants.API_URL}ExamMarksEntries/getStudentRemarks`,
+      { userId: studentId, termId, academicSessionId }
+    );
+    const response4 = this.http.post<any>(
+      `${AppConstants.API_URL}ExamAttendances/studentDetail`,
+      { userId: studentId, academicSessionId }
+    );
+    return forkJoin([response1, response2, response3, response4]);
+  }
+
+  loadStudentCoScholasticMarks(id) {
+    return this.http.post<any>(
+      `${AppConstants.API_URL}ExamMarksEntries/getCoScholasticRemarks`,
+      {
+        studentId: id,
+      }
+    );
+  }
+
+  generateReportCard(termId, studentId, token) {
+    return this.http.post<any>(
+      `${AppConstants.API_URL}ExamTermReportCards/generateReportCard`,
+      {
+        termId,
+        studentId,
+        token,
+      }
+    );
+  }
+
+  saveExamReportCardConfiguration(data) {
+    return this.http.post<any>(
+      `${AppConstants.API_URL}ExamReportCardConfigurations/save`,
+      {
+        ...data,
+      }
+    );
+  }
+
+  fetchExamReportCardConfiguration(data) {
+    return this.http.post<any>(
+      `${AppConstants.API_URL}ExamReportCardConfigurations/fetch`,
+      {
+        ...data,
+      }
+    );
+  }
+
+  getInstitutes(): Observable<any[]> {
+    return this.http.get<any>(`${AppConstants.API_URL}Institutes`);
+  }
+  getTermReportCardDetail(inputData) {
+    return this.http.post<any>(
+      `${AppConstants.API_URL}ExamTermReportCards/getTermReportCardDetail`,
+      inputData
+    );
+  }
+
+  generateReportCardPDF({ termId, userId, academicSessionId }) {
+    const inputArray = [];
+    if (userId.length > 0) {
+      userId.forEach(element => {
+        inputArray.push(this.http.post<any>(
+          `${AppConstants.API_URL}PdfGenerator/generate-annotated-PDF`,
+          {
+            "inputData": {
+              "studentId": element,
+              "termId": termId,
+              "academicSessionId": academicSessionId
+            },
+            "moduleName": "ExamTermReportCard"
+          }
+        ))
+      });
+    }
+    return forkJoin(inputArray);
+  }
+}
