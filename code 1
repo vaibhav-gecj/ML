@@ -1,0 +1,767 @@
+import { Component, OnInit } from '@angular/core';
+import {
+  MatDialog,
+  MAT_DIALOG_DATA,
+  MatDialogRef,
+} from '@angular/material/dialog';
+import { ToastrService } from 'ngx-toastr';
+
+// Import Services
+import { ExamMarksEntryService } from '../../../../services/apis';
+import { AuthService } from '../../../../services/auth.service';
+import { Router, ActivatedRoute } from '@angular/router';
+import { StudentRemarkComponent } from './components/student-remark';
+import { StudentSelectionModelComponent } from './components/student-selection-model';
+import { SaveConfirmationComponent } from '../../../../components/save-confirmation/save-confirmation.component';
+import { ExaminationService } from './../../examination.service';
+
+@Component({
+  selector: 'app-marks-view',
+  templateUrl: './marks-view.component.html',
+  styleUrls: ['./marks-view.component.scss'],
+})
+export class MarksViewComponent implements OnInit {
+  isLoading = false;
+  displayedColumns = ['rno', 'userName'];
+  columns: Array<any> = [];
+
+  // Filters data
+  academicSessionList: any = [];
+  academicSession: any;
+  termList: any = [];
+  term: any;
+  classList: any = [];
+  class: any;
+  subjectTypeList: any = [
+    {
+      id: 0,
+      name: 'Academic',
+    },
+    {
+      id: 1,
+      name: 'Co-scholastic',
+    },
+  ];
+  subjectType: any;
+  examCategoryList: any = [];
+  examCategory: any;
+  examTypeMasterList: any = [];
+  examTypeMaster: any;
+  subjectGroupList: any = [];
+  subjectGroup: any;
+  subjectList = [];
+  subject: any;
+  statusList: any = [
+    {
+      id: '0', name: 'Un- Published'
+    },
+    {
+      id: '1', name: 'Published'
+    }
+  ];
+  userStatusList: any = [
+    {
+      id: false, name: 'No'
+    },
+    {
+      id: true, name: 'Yes'
+    }
+  ]
+  userStatus: any = this.userStatusList[0];
+  status: any = this.statusList[1];
+  marksViewType: any = '3';
+  isAllowPublish: boolean = false;
+  currentPublishStatus = false;
+  isAllowUnlock = false;
+  isReleaseAllow = false;
+  selectAll: boolean = false;
+  isSAM:boolean = false;
+  branchDetailsList: any;
+  branch: any;
+  selectedBranch: any;
+  dataSource = [];
+  isIGCSEBoardId: string = '5f43465cc7bb22001990e5a2';
+  isIGCSEBoard: Boolean = false;
+  associationId: void;
+  branchID: any
+  branchName: any;
+  queryParams: any;
+
+  constructor(
+    private examMarksEntryService: ExamMarksEntryService,
+    private router: Router,
+    public dialog: MatDialog,
+    private authService: AuthService,
+    private toastrService: ToastrService,
+    private examinationService: ExaminationService,
+    private activatedRoute: ActivatedRoute
+  ) { }
+
+  ngOnInit() {
+  
+    this.activatedRoute.queryParams.subscribe((params) => {
+      this.queryParams = params;
+      // this.authService.getLoggedInUser().then((userDetail: any) => {
+      //   this.projectService
+      //     .getBranchDetail(userDetail.branchId)
+      //     .subscribe((branchDetail) => {
+      //       if (branchDetail.boardId === this.isIGCSEBoardId) {
+      //         this.isIGCSEBoard = true;
+      //       }
+      //     });
+      // });
+      this.loadAcademicSessions();
+    });
+    }
+  
+
+  showPublishButtonPermission(gradeId, sectionId) {
+    if (this.authService.checkPermission('admin.examination.coordinator') || this.authService.checkPermission('configuration.institute.senioracademicmanager')) {
+      this.isAllowPublish = true;
+    } else {
+      this.examMarksEntryService.isClassTeacher(gradeId, sectionId, this.academicSession.id).subscribe((res) => {
+        this.isAllowPublish = res;
+      });
+    }
+
+    if (this.authService.checkPermission('configuration.institute.senioracademicmanager')) {
+      this.isAllowUnlock = true;
+      this.isSAM = true;
+    }
+
+    if (this.authService.checkPermission('admin.examination.releaseReportCard')) {
+      this.isReleaseAllow = true;
+    }
+  }
+  loadBranch() {
+    this.selectedBranch = null;
+    console.log(this.associationId, 'this.associationIdthis.associationId');
+    
+    this.examinationService.getbranches(this.associationId).subscribe((res) => {
+      this.branchDetailsList = res
+      if (this.branchDetailsList.length > 0) {
+        this.selectedBranch = this.branchDetailsList[0].name;
+        this.branchDetailsList.forEach(element => {
+          this.branchID = element.id
+        });
+      }
+    });
+  }
+
+  loadAcademicSessions =  async () => {
+    this.academicSessionList = [];
+    this.academicSession = {};
+    this.termList = [];
+    this.term = {};
+    this.classList = [];
+    this.class = {};
+    this.examCategoryList = [];
+    this.examCategory = {};
+    this.examTypeMasterList = [];
+    this.examTypeMaster = {};
+    this.subjectGroupList = [];
+    this.subjectGroup = {};
+    this.subjectList = [];
+    this.subject = {};
+    this.dataSource = [];
+    this.isLoading = true;
+
+    const response =  await this.examMarksEntryService.getExamFilter({}).toPromise();
+    this.isLoading = false;
+    
+    console.log(this.associationId,'this.associationIdthis.associationId');
+    
+    console.log(response,'responseresponse');
+    
+    if (response && response.list.length) {
+      this.academicSessionList = response.list;
+      this.associationId = response.list[0].instituteId;
+      const index = response.list.findIndex(_cI => _cI.isActive)
+      this.academicSession = this.academicSessionList[index];
+      this.associationId = this.academicSession.instituteId;
+      this.isLoading = true;
+      this.examinationService.getNonCorporateBranches(this.associationId).subscribe((res) => {
+        this.branchDetailsList = res;
+        if (this.branchDetailsList.length > 0) {
+          this.branch = this.branchDetailsList[0];
+          if (this.branch.boardId === this.isIGCSEBoardId) {
+            this.isIGCSEBoard = true;
+          }
+        }
+        this.loadTerms(this.academicSessionList[index]);
+      },
+        (err) => {
+          this.isLoading = false;
+          if (err.error && err.error.error) {
+            this.toastrService.error(err.error.error.message);
+          } else {
+            this.toastrService.error(err.message);
+          }
+        });
+      
+    }
+  }
+
+
+  onChangeAcademicSessions(event){
+    this.academicSession = event
+    this.loadTerms(event);
+  }
+
+
+  loadTerms(event) {
+    this.termList = [];
+    this.term = {};
+    this.classList = [];
+    this.class = {};
+    this.examCategoryList = [];
+    this.examCategory = {};
+    this.examTypeMasterList = [];
+    this.examTypeMaster = {};
+    this.subjectGroupList = [];
+    this.subjectGroup = {};
+    this.subjectList = [];
+    this.subject = {};
+    this.dataSource = [];
+    this.isLoading = true;
+    this.examMarksEntryService.getExamFilter({
+      academicSessionId:event.id
+    }).subscribe((res) => {
+      this.isLoading = false;
+      if (res && res.list.length) {
+        // 
+        this.termList = [{ id: 'all', name: 'End of Year' }, ...res.list];
+        this.term = this.termList[1];
+        this.onChangeTerm(this.term);
+
+      }
+      
+    });
+    
+  }
+
+  onChangeBranch() {
+    if (this.branch.boardId === this.isIGCSEBoardId) {
+      this.isIGCSEBoard = true;
+    }
+    this.loadClasses();
+  }
+
+  onChangeTerm(event) {
+    this.term = event;
+    this.loadClasses();
+  }
+
+  loadClasses() {
+    this.classList = [];
+    this.class = {};
+    this.examCategoryList = [];
+    this.examCategory = {};
+    this.examTypeMasterList = [];
+    this.examTypeMaster = {};
+    this.subjectGroupList = [];
+    this.subjectGroup = {};
+    this.subjectList = [];
+    this.subject = {};
+    this.dataSource = [];
+    this.isLoading = true;
+    console.log(this.branch,'this.branch');
+    
+    this.examMarksEntryService
+      .getExamFilter({
+        branchId: this.branch.id,
+        academicSessionId:this.academicSession.id,
+        termId: this.term.id
+      })
+      .subscribe((res) => {
+        this.isLoading = false;
+        if (res && res.list.length) {
+          this.classList = res.list;
+          this.class = this.classList[0];
+          this.onClassChange(this.classList[0]);
+        }
+      });
+  }
+
+  onClassChange(event) {
+    this.class = event;
+    this.showPublishButtonPermission(event.gradeId, event.sectionId);
+    if (this.term.id === 'all') {
+      this.generateHeaderColum([]);
+    } else {
+      this.loadExamCategory();
+    }
+  }
+
+  loadExamCategory() {
+    this.examCategoryList = [];
+    this.examCategory = {};
+    this.examTypeMasterList = [];
+    this.examTypeMaster = {};
+    this.subjectGroupList = [];
+    this.subjectGroup = {};
+    this.subjectList = [];
+    this.subject = {};
+    this.dataSource = [];
+    this.isLoading = true;
+    this.examMarksEntryService
+      .getExamFilter({
+        branchId: this.branch.id,
+        academicSessionId:this.academicSession.id,
+        termId: this.term.id,
+        gradeId: this.class.gradeId,
+      })
+      .subscribe((res) => {
+        this.isLoading = false;
+        if (res && res.list.length) {
+          this.examCategoryList = res.list;
+          this.examCategory = this.examCategoryList[0];
+          this.onExamCategoryChange(this.examCategoryList[0]);
+        }
+      });
+  }
+
+  onExamCategoryChange(event) {
+    this.examCategory = event;
+    this.loadExamType();
+  }
+
+  loadExamType() {
+    this.examTypeMasterList = [];
+    this.examTypeMaster = {};
+    this.subjectGroupList = [];
+    this.subjectGroup = {};
+    this.subjectList = [];
+    this.subject = {};
+    this.dataSource = [];
+    this.isLoading = true;
+    this.examMarksEntryService
+      .getExamFilter({
+        branchId: this.branch.id,
+        academicSessionId:this.academicSession.id,
+        termId: this.term.id,
+        gradeId: this.class.gradeId,
+        examCategoryMasterId: this.examCategory.id,
+      })
+      .subscribe((res) => {
+        this.isLoading = false;
+        if (res && res.list.length) {
+          this.examTypeMasterList = res.list;
+          this.examTypeMaster = this.examTypeMasterList[0];
+          this.onExamTypeChange(this.examTypeMasterList[0]);
+        }
+      });
+  }
+
+  onExamTypeChange(event) {
+    this.examTypeMaster = event;
+    if (this.examTypeMaster.configuration.isCoScholastic) {
+      this.marksViewType = '1';
+    } else {
+      this.marksViewType = '3';
+    }
+    this.loadSubjectGroup();
+  }
+
+  loadSubjectGroup() {
+    this.subjectGroupList = [];
+    this.subjectGroup = {};
+    this.subjectList = [];
+    this.subject = {};
+    this.dataSource = [];
+    this.isLoading = true;
+    this.examMarksEntryService
+      .getExamFilter({
+        branchId: this.branch.id,
+        academicSessionId:this.academicSession.id,
+        termId: this.term.id,
+        gradeId: this.class.gradeId,
+        sectionId: this.class.sectionId,
+        examCategoryMasterId: this.examCategory.id,
+        examTypeMasterId: this.examTypeMaster.id,
+      })
+      .subscribe((res) => {
+        this.isLoading = false;
+        if (res && res.list.length) {
+          this.subjectGroupList = [{ id: 'all', name: 'All' }, ...res.list];
+          this.subjectGroup = this.subjectGroupList[0];
+          this.generateHeaderColum(res.list);
+        }
+      });
+  }
+
+  onSubjectGroupChange(event) {
+    this.subjectGroup = event;
+    if (this.subjectGroup.id !== 'all') {
+      if (this.subjectGroup.configuration.assessmentLevel === 2) {
+        this.generateHeaderColum([this.subjectGroup]);
+      } else if (this.subjectGroup.configuration.assessmentLevel === 0) {
+        this.loadSubject();
+      }
+    } else {
+      this.generateHeaderColum(this.getSubjectGroup());
+    }
+
+  }
+
+  loadSubject() {
+    this.subjectList = [];
+    this.subject = {};
+    this.dataSource = [];
+    this.isLoading = true;
+    this.examMarksEntryService
+      .getExamFilter({
+        branchId: this.branch.id,
+        academicSessionId:this.academicSession.id,
+        termId: this.term.id,
+        gradeId: this.class.gradeId,
+        sectionId: this.class.sectionId,
+        examCategoryMasterId: this.examCategory.id,
+        examTypeMasterId: this.examTypeMaster.id,
+        subjectGroupId: [this.subjectGroup.id]
+      })
+      .subscribe((res) => {
+        this.isLoading = false;
+        if (res && res.list.length) {
+          this.subjectList = res.list;
+          this.subject = this.subjectList[0];
+          this.generateHeaderColum(res.list);
+        }
+      });
+  }
+
+  getSubjectGroup() {
+    const subjectGroupIds = [];
+    this.subjectGroupList.forEach(_cSG => {
+      if (_cSG.id !== 'all') {
+        subjectGroupIds.push(_cSG)
+      }
+    })
+    return subjectGroupIds;
+  }
+
+  generateHeaderColum(subjectGroupList) {
+    this.columns = [];
+    const columns = [];
+    const displayedColumns = ['rno', 'userName'];
+    this.displayedColumns = [];
+    if (subjectGroupList.length > 0) {
+      subjectGroupList.forEach((_cSG) => {
+        columns.push({
+          id: _cSG.id,
+          name: _cSG.configuration.entryType ? `sub_${_cSG.id}_gradeLabel` : `sub_${_cSG.id}_marks`,
+          label: _cSG.name,
+          colorCode: `sub_${_cSG.id}_gradeColorCode`,
+          attendanceStatus: `sub_${_cSG.id}_attendanceStatus`,
+          totalPercent: `sub_${_cSG.id}_totalPercent`,
+          gradeLabel: `sub_${_cSG.id}_gradeLabel`,
+          configuration: _cSG.configuration
+        });
+      });
+    }
+    this.columns = columns;
+    this.columns.forEach((_cN) => {
+      displayedColumns.push(_cN.name);
+    });
+    this.displayedColumns = displayedColumns;
+    this.loadData();
+  }
+
+  changeStatusChange(event) {
+    this.status = event;
+    this.loadData();
+  }
+
+  changeUserStatusChange(event) {
+    this.userStatus = event;
+    this.loadData();
+  }
+
+  loadData() {
+    this.dataSource = [];
+    const subjectGroupIds = this.getSubjectGroup();
+    const subjectFilter = {
+      subjectGroupId: [],
+      subjectId: []
+    };
+    let filter = {}
+    if (this.term.id !== 'all') {
+      if (this.subjectGroup.id === 'all') {
+        subjectFilter.subjectGroupId = subjectGroupIds.map(_cSG => _cSG.id)
+      } else if (this.subjectGroup.id !== 'all') {
+        if (this.subjectGroup.configuration.assessmentLevel === 2) {
+          subjectFilter.subjectGroupId = [this.subjectGroup.id];
+        } else if (this.subjectGroup.configuration.assessmentLevel === 0) {
+          subjectFilter.subjectGroupId = [this.subjectGroup.id];
+          subjectFilter.subjectId = this.subjectList.map(_cS => _cS.id)
+        }
+      }
+      filter = {
+        examCategoryMasterId: this.examCategory.id,
+        examTypeMasterId: this.examTypeMaster.id,
+      }
+    }
+    this.isLoading = true;
+    this.examMarksEntryService
+      .getExamMarks({
+        branchId: this.branch.id,
+        academicSessionId:this.academicSession.id,
+        termId: this.term.id,
+        gradeId: this.class.gradeId,
+        sectionId: this.class.sectionId,
+        status: this.status.id,
+        archived: this.userStatus.id,
+        ...filter,
+        ...subjectFilter
+      })
+      .subscribe((res) => {
+        const data = [];
+        res.forEach((element) => {
+          data.push({
+            rno: element.rollNumber,
+            ...element,
+            isSelected: false
+          });
+        });
+        if (data.length > 0) {
+          if (data[0].status === 1) {
+            this.currentPublishStatus = false
+          }
+
+          if (data[0].status === 2) {
+            this.currentPublishStatus = true
+          }
+
+        }
+        this.dataSource = data;
+        this.isLoading = false;
+        this.selectAll = false;
+      });
+  }
+
+  viewMarks(id) {
+    this.router.navigate(['examination/report-card', this.term.id, id]);
+  }
+
+  openDialog(data): void {
+    this.dialog.open(StudentRemarkComponent, {
+      data,
+      // position: { top: '20%', left: '79.4%' },
+      panelClass: 'student-remark-component',
+      height: '90%',
+      width: '60%',
+      disableClose: true,
+    });
+  }
+
+  openRemarkModel(element) {
+    const subjectGroupList = this.getSubjectGroup();
+    this.openDialog({
+      userId: element.userId,
+      userName: element.userName,
+      userThumbnail: element.userThumbnail || {},
+      term: this.term,
+      academicSession:this.academicSession,
+      class: this.class,
+      examCategory: this.examCategory,
+      examTypeMaster: this.examTypeMaster,
+      subjectGroupId: subjectGroupList.map((_cSG) => _cSG.id),
+      currentPublishStatus: this.currentPublishStatus,
+      isIGCSEBoard: this.isIGCSEBoard
+    });
+  }
+
+  changeMarksViewType(event) {
+    this.isLoading = true;
+    setTimeout(() => {
+      this.isLoading = false;
+    }, 1000);
+  }
+
+  publish() {
+    const userIds = [];
+    this.dataSource.forEach(element => {
+      if (element.isSelected) {
+        userIds.push(element.userId);
+      }
+    });
+
+    if (userIds.length > 0) {
+      const subjectGroupList = this.getSubjectGroup();
+      const dialogRef = this.dialog.open(SaveConfirmationComponent, {
+        data: {
+          message: `Are you sure you want to publish marks for selected ${userIds.length} students ?`,
+          disableBtn2: false,
+          btn1Label: 'Cancel',
+          btn2Label: 'OK'
+        },
+        disableClose: true,
+        // panelClass: 'confirmation-modal',
+        // width: '25%',
+        // height: '25%'
+      });
+
+      dialogRef.afterClosed().subscribe(result => {
+        if (result) {
+          if (result === 2) {
+            this.isLoading = true;
+            this.examMarksEntryService
+              .publishExamMarks({
+                academicSessionId:this.academicSession.id,
+                termId: this.term.id,
+                gradeId: this.class.gradeId,
+                sectionId: this.class.sectionId,
+                examCategoryMasterId: this.examCategory.id,
+                examTypeMasterId: this.examTypeMaster.id,
+                subjectGroupId: subjectGroupList.map((_cSG) => _cSG.id),
+                userIds,
+                status: 2
+              })
+              .subscribe((res) => {
+                this.isLoading = false;
+                this.toastrService.success('Marks published successfully for selected students.');
+                this.selectAll = false;
+                this.loadData();
+              });
+          }
+        }
+      });
+    } else {
+      this.toastrService.error('Please select user to publish marks');
+    }
+  }
+
+  unlock() {
+    const userIds = [];
+    this.dataSource.forEach(element => {
+      if (element.isSelected) {
+        userIds.push(element.userId);
+      }
+    });
+
+    if (userIds.length > 0) {
+      const subjectGroupList = this.getSubjectGroup();
+      const dialogRef = this.dialog.open(SaveConfirmationComponent, {
+        data: {
+          message: `Are you sure you want to unlock marks for selected ${userIds.length} students ? `,
+          disableBtn2: false,
+          btn1Label: 'Cancel',
+          btn2Label: 'OK'
+        },
+        disableClose: true,
+        // panelClass: 'confirmation-modal',
+        // width: '25%',
+        // height: '25%'
+      });
+
+      dialogRef.afterClosed().subscribe(result => {
+        if (result) {
+          if (result === 2) {
+            this.isLoading = true;
+            this.examMarksEntryService
+              .publishExamMarks({
+                branchId: this.branch.id,
+                academicSessionId:this.academicSession.id,
+                termId: this.term.id,
+                gradeId: this.class.gradeId,
+                sectionId: this.class.sectionId,
+                examCategoryMasterId: this.examCategory.id,
+                examTypeMasterId: this.examTypeMaster.id,
+                subjectGroupId: subjectGroupList.map((_cSG) => _cSG.id),
+                userIds,
+                status: 1
+              })
+              .subscribe((res) => {
+                this.isLoading = false;
+                this.toastrService.success('Marks unlocked successfully for selected students.')
+                this.selectAll = false;
+                this.loadData();
+              });
+          }
+        }
+      });
+    } else {
+      this.toastrService.error('Please select user to un-publish marks');
+    }
+  }
+
+  regenerateReportCard(user) {
+    this.isLoading = true;
+    this.examMarksEntryService
+      .generateReportCard({
+        branchId: this.branch.id,
+        academicSessionId:this.academicSession.id,
+        termId: this.term.id,
+        gradeId: this.class.gradeId,
+        sectionId: this.class.sectionId,
+        examCategoryMasterId: this.examCategory.id,
+        examTypeMasterId: this.examTypeMaster.id,
+        userId: user.userId
+      })
+      .subscribe((res) => {
+        this.isLoading = false;
+        this.toastrService.success('Report card re-generated successfully');
+      });
+  }
+
+  openReportCardGenerationModel() {
+    this.openStudentSelectionDialog({
+      users: this.dataSource,
+      term: this.term,
+      class: this.class,
+      examCategory: this.examCategory,
+      examTypeMaster: this.examTypeMaster,
+      currentPublishStatus: this.currentPublishStatus,
+      academicSession:this.academicSession,
+    });
+  }
+
+  openStudentSelectionDialog(data): void {
+    this.dialog.open(StudentSelectionModelComponent, {
+      data,
+      // position: { top: '20%', left: '79.4%' },
+      panelClass: 'student-remark-component',
+      height: '90%',
+      width: '60%',
+      disableClose: true,
+    });
+  }
+
+  previewReportCard(data) {
+    this.isLoading = true;
+    this.examMarksEntryService
+      .isReportCardAvailable({
+        branchId: this.branch.id,
+        academicSessionId:this.academicSession.id,
+        termId: this.term.id,
+        userId: data.userId
+      })
+      .subscribe((res) => {
+        this.isLoading = false;
+        if (res.status) {
+          if (res.reportCardPDFUrl !== '') {
+            window.open(res.reportCardPDFUrl, '_blank', '', true);
+          } else {
+            this.toastrService.success('Report card released preview will be available soon...');
+          }
+        } else {
+          this.toastrService.success('Report card not released please release and preview');
+        }
+      });
+  }
+
+  onCheckboxChange(event, element) {
+    const selectedUserList = this.dataSource.filter(_cR => _cR.isSelected)
+    if (this.dataSource.length === selectedUserList.length) {
+      this.selectAll = true
+    } else {
+      this.selectAll = false
+    }
+  }
+
+  onSelectAllCheckboxChange(event) {
+    this.dataSource.forEach(_cD => {
+      _cD.isSelected = event
+    })
+  }
+}
